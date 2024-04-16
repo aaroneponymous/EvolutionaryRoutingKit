@@ -1,0 +1,2 @@
+#ifndef GENETIC_STATIC_H
+#define GENETIC_STATIC_h
