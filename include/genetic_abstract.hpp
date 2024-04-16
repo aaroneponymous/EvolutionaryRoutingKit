@@ -24,7 +24,7 @@ protected:
 public:
     GeneticAbstract(std::shared_ptr<OSMRoutingGraph> graph) : graph_(graph) {}
     
-    virtual ~GeneticAbstract() {}
+    virtual ~GeneticAbstract() noexcept {}
 
     // Initialize the Population
     virtual void initialize_pop() = 0;
