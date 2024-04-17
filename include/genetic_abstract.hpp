@@ -7,7 +7,7 @@
 #ifndef GENETIC_ABSTRACT_H
 #define GENETIC_ABSTRACT_H
 
-#include <routingkit/osm_graph_builder.h>
+#include </home/aaroneponymous/RoutingKit/include/routingkit/osm_simple.h>
 #include <vector>
 #include <memory>
 
@@ -20,9 +20,9 @@ using namespace RoutingKit;
 class GeneticAbstract {
 protected:  
     // Shared Graph Data Structure
-    std::shared_ptr<OSMRoutingGraph> graph_; // [ ]: Use std::atomic<shared_ptr> to prevent data race
+    std::shared_ptr<SimpleOSMCarRoutingGraph> graph_; // [ ]: Use std::atomic<shared_ptr> to prevent data race
 public:
-    GeneticAbstract(std::shared_ptr<OSMRoutingGraph> graph) : graph_(graph) {}
+    GeneticAbstract(std::shared_ptr<SimpleOSMCarRoutingGraph> graph) : graph_(graph) {}
     
     virtual ~GeneticAbstract() noexcept {}
 
@@ -46,6 +46,8 @@ public:
 
     // Termination Condition Status
     virtual bool should_terminate() const = 0;
+
+    // Utility Debugging Functions
 
 };
 

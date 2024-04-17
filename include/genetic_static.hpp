@@ -4,13 +4,24 @@
 #include "genetic_abstract.hpp"
 #include <vector>
 #include <limits>
+#include <queue>
+#include <limits>
 
-typedef std::vector<unsigned> chromosome_path_;
+struct DijkstraState
+{
+    unsigned node;
+    unsigned cost;
+    bool operator>(const DijkstraState &other) const
+    {
+        return cost > other.cost;
+    }
+};
 
 class GeneticStatic : public GeneticAbstract
 {
 private:
-    std::vector<chromosome_path_> population_paths_;
+    std::vector<unsigned> chromosome_path_;
+    std::vector<std::vector<unsigned>> population_paths_;
     std::vector<double> fitness_val_;
     unsigned population_size_;
     unsigned generations_;
@@ -28,7 +39,7 @@ private:
 
 public:
     // Add a parameter for the graph in the constructor
-    GeneticStatic(std::shared_ptr<OSMRoutingGraph> graph, unsigned pop_size, unsigned gen, double mut_rate, double cross_rate,
+    GeneticStatic(std::shared_ptr<SimpleOSMCarRoutingGraph> graph, unsigned pop_size, unsigned gen, double mut_rate, double cross_rate,
                   unsigned src, unsigned dst)
         : GeneticAbstract(graph), // Pass the graph to the base class constructor
           population_size_(pop_size), generations_(gen), mutation_rate_(mut_rate), crossover_rate_(cross_rate),
@@ -39,10 +50,9 @@ public:
 
     ~GeneticStatic() noexcept override {}
 
-    void initialize_pop() override
-    {
-        // Implement initialization logic
-    }
+    void initialize_pop();
+
+    std::vector<unsigned> dijkstra(unsigned src, unsigned dst);
 
     void evaluate_fitness() override
     {
@@ -74,5 +84,7 @@ public:
         return path_found_ || curr_gen_ >= generations_;
     }
 };
+
+
 
 #endif // GENETIC_STATIC_H
