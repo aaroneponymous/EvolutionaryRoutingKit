@@ -54,31 +54,6 @@ public:
 
     std::vector<unsigned> dijkstra(unsigned src, unsigned dst);
 
-    void evaluate_fitness() override
-    {
-        // Implement fitness evaluation logic
-    }
-
-    void selection() override
-    {
-        // Implement selection logic
-    }
-
-    void crossover() override
-    {
-        // Implement crossover logic
-    }
-
-    void mutation() override
-    {
-        // Implement mutation logic
-    }
-
-    void run_ga() override
-    {
-        // Implement the main run loop of the genetic algorithm
-    }
-
     bool should_terminate() const override
     {
         return path_found_ || curr_gen_ >= generations_;

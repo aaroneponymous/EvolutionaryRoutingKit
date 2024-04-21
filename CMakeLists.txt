@@ -18,6 +18,8 @@ add_executable(genetic_static ${SOURCES})
 target_include_directories(genetic_static PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     /home/aaroneponymous/RoutingKit/include/routingkit
+    #include this for the library relative paths
+    /home/aaroneponymous/RoutingKit/include
 )
 
 message(STATUS "Including RoutingKit from: /home/aaroneponymous/RoutingKit/include/routingkit")

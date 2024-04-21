@@ -29,20 +29,7 @@ public:
     // Initialize the Population
     virtual void initialize_pop() = 0;
 
-    // Fitness Evaluation for individual in population
-    virtual void evaluate_fitness() = 0;
 
-    // Selection
-    virtual void selection() = 0;
-
-    // Crossover
-    virtual void crossover() = 0;
-
-    // Mutation
-    virtual void mutation() = 0;
-
-    // Run GA
-    virtual void run_ga() = 0;
 
     // Termination Condition Status
     virtual bool should_terminate() const = 0;
