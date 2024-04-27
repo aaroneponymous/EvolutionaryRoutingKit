@@ -33,7 +33,7 @@
             "iconColour": "yellow",
         },
         "BUG": {
-            "foreground": "black",
+            "foreground": "white",
             "background": "red",
             "iconColour": "red",
         },
@@ -118,7 +118,10 @@
         "semaphore": "cpp",
         "shared_mutex": "cpp",
         "stop_token": "cpp",
-        "thread": "cpp"
+        "thread": "cpp",
+        "climits": "cpp",
+        "iomanip": "cpp",
+        "unordered_set": "cpp"
     }
 
 

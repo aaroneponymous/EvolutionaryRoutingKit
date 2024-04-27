@@ -7,15 +7,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Source files
 set(SOURCES
-    src/genetic_static.cpp
+    src/ant_colony_system.cpp
     # Add other source files here
 )
 
 # Executable
-add_executable(genetic_static ${SOURCES})
+add_executable(acs ${SOURCES})
 
 # Include directories specific to the genetic_static target
-target_include_directories(genetic_static PRIVATE
+target_include_directories(acs PRIVATE
     ${PROJECT_SOURCE_DIR}/include
     /home/aaroneponymous/RoutingKit/include/routingkit
     #include this for the library relative paths
@@ -28,7 +28,7 @@ message(STATUS "Including RoutingKit from: /home/aaroneponymous/RoutingKit/inclu
 find_library(ROUTING_KIT_LIB NAMES routingkit PATHS /home/aaroneponymous/RoutingKit/lib NO_DEFAULT_PATH)
 if(ROUTING_KIT_LIB)
     message(STATUS "RoutingKit library found: ${ROUTING_KIT_LIB}")
-    target_link_libraries(genetic_static ${ROUTING_KIT_LIB})
+    target_link_libraries(acs ${ROUTING_KIT_LIB})
 else()
     message(STATUS "RoutingKit library not found. Ensure RoutingKit is correctly installed or the path is set correctly.")
 endif()

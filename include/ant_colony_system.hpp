@@ -6,34 +6,47 @@
 #ifndef ANT_COLONY_SYSTEM_H
 #define ANT_COLONY_SYSTEM_H
 
+#include </home/aaroneponymous/RoutingKit/include/routingkit/osm_simple.h>
 #include <vector>
-#include <routingkit/osm_simple.h>
+#include <unordered_set>
+#include <iostream>
+#include <iomanip>
 
 using namespace RoutingKit;
 
+/**
+ * @brief:
+ *
+ */
+
 struct Ant
 {
-    /**
-     * @brief Constructor to create a new ant
-     * @param start Start Node of ant
-     * @param id    Ant ID
-     * @return no return value
-     */
+    unsigned ant_id_;
+    unsigned curr_node_; // or start/source node
+    unsigned goal_node_; // or destination node
+    unsigned distance_ = 0;
+    double time_taken_ = 0;
+    bool reached_ = false;
+    bool elite_ = false;
 
-    Ant(const unsigned start, const int id = 0)
-        : id_(id), current_node_(start), previous_node_(-1) {}
+    std::vector<unsigned> path_;                 // Path Taken
+    std::vector<unsigned> indices_arcs;          // Arc Indices in the Pheromone Matrix
+    std::unordered_set<unsigned> visited_nodes_; // Set of Visited Nodes
 
-    bool found_goal_ = false;
-    int id_;
-    int steps_ = 0;
-    unsigned current_node_;
-    unsigned previous_node_;
-    std::vector<unsigned> path_;
+    Ant(int id, unsigned start, unsigned goal)
+        : ant_id_(id), curr_node_(start), goal_node_(goal) {}
 };
 
 /**
  * @brief
+ *
+ *
  */
+
+// [x] : For a better intital_pheromones heuristic
+// [x] : Can construct an initial shortest path tour between all nodes
+// [x] : And Calculate it with 1 / Lnn (length of that path)
+constexpr double initial_pheromones = 0.5;
 
 class AntColonySystem
 {
@@ -41,69 +54,79 @@ private:
     int num_ants_;
     double alpha_;      // history_coefficient
     double beta_;       // heuristic_coefficient
-    double decay_rate_; // decay rate of pheromones
-    double Q_;          // total amount of pheromone left on the trail be each ant
+    double decay_rate_; // (rho) decay rate of pheromones
+    double Q_;          // constant multiplication factor for the cost/reward function
     int iterations_;
-    std::vector<std::vector<double>> pheromone_matrix_;
-    // std::vector<std::vector<double>> pheromone_matrix_global_; // [ ]: Might help in Parallel
-    std::vector<std::vector<double>> heuristic_matrix_;
+    unsigned distance_global_ = 0;
+
+    std::vector<double> pheromone_list_; // Using a list to mimic graph_.head vector
     std::vector<Ant> ants_;
+    std::vector<unsigned> global_tour_; //  Global Best Tour
+    std::vector<unsigned> global_tour_arcs_;
     SimpleOSMCarRoutingGraph graph_;
 
 public:
-    // Constructor
     AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, double alpha, double beta, double decay_rate, double Q, int iterations)
         : graph_(graph), num_ants_(n_ants), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), Q_(Q), iterations_(iterations)
     {
-        initialize_matrices();
+        pheromone_list_.resize(graph_.head.size());
+        std::fill(pheromone_list_.begin(), pheromone_list_.end(), initial_pheromones);
     }
 
-    // Set Parameters dynamically
-    void set_parameters(int n_ants, double alpha, double beta, double decay_rate, double Q, int iterations)
+    // Change all parameters
+    void set_parameters(double alpha, double beta, double decay_rate, double Q)
     {
-        num_ants_ = n_ants;
         alpha_ = alpha;
         beta_ = beta;
         decay_rate_ = decay_rate;
         Q_ = Q;
-        iterations_ = iterations;
+    }
 
-        // Re-initialize matrices and other resources if necessary (Do we need to)
-        // initialize_matrices();
-    };
+    // Path Planning Methods
+    void get_path(double const src_latitude, double const src_long,
+                  double const dst_latitdue, double const dest_long);
 
-    // Initialize pheromone and heuristic matrices
-    void initialize_matrices(const std::vector<std::vector<unsigned>> &geo_distance);
+    // Return arc index
+    unsigned choose_node(Ant &ant);
 
-    // Initialize pheromone and heuristic matrices
-    void initialize_matrices();
+    // Probability & Related Computational Functions
 
-    // Main ACO process
-    void run_optimization();
+    std::vector<double> get_probabilities(Ant &ant); // Probability of moving from node i to neighbours
 
-    // Generate a solution for one ant
-    std::vector<unsigned> generate_solution(Ant &ant);
+    /**
+     * @brief Removes loops in path
+     * @param ant Ant in whose path the loops are to be removed
+     * @return void
+     * @details Removes loops in path of an ant only when a point is revisted.
+     */
+    static void remove_loop(Ant &ant);
 
-    // Update pheromone matrix after each ant completes its tour
-    void update_pheromones_local();
+    void print_ant_path(Ant& ant);
 
-    // Update pheromone matrix globally after all ants have completed their tours
-    void update_pheromones_global();
+    void print_global_path()
+    {
+        for (const auto& node : global_tour_)
+        {
+            std::cout << "Node: " << node << " ";
+        }
 
-    // Evaporate pheromones to simulate natural decay over time
-    void evaporate_pheromones();
+        std::cout << std::endl;
 
-    // Choose the next node for an ant based on probability distribution
-    unsigned choose_next_node(const Ant &ant, const std::vector<bool> &visited);
+        std::cout << "Distance: " << distance_global_ << std::endl;
+    }
 
-    // Calculate the probability of moving to the next node
-    double calculate_transition_probability(int from, int to, const std::vector<bool> &visited);
+    // Accessors & Mutators
 
-    // Calculate the total cost of a tour
-    double calculate_tour_cost(const std::vector<unsigned> &tour);
+    double get_alpha() const { return alpha_; }
+    double get_beta() const { return beta_; }
+    double get_decay_rate() const { return decay_rate_; }
+    double get_Q() const { return Q_; }
+
+    void set_alpha(double alpha) { alpha_ = alpha; }
+    void set_beta(double beta) { beta_ = beta; }
+    void set_decay_rate(double decay_rate) { decay_rate_ = decay_rate; }
+    void set_Q(double Q) { Q_ = Q; }
 };
-
-#endif // ANT_COLONY_SYSTEM_H
 
 /**
  * @brief: Ant-Colony System Implementation Details
@@ -169,3 +192,5 @@ public:
  *             - @function: T(ij) = (1 - decay) x Tij + decay x Tij
  *
  */
+
+#endif // ANT_COLONY_SYSTEM_H
