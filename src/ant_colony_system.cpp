@@ -118,6 +118,8 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
                 // Push Edges in Local Arc Index
 
                 local_arc_index.push_back(arc_index);
+
+                if (graph_.head[arc_index] == ant.goal_node_) break;
             }
 
             print_ant_path(ant);
@@ -149,7 +151,7 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
     // Parameters for Decision
-    double q0 = 0.15;
+    double q0 = 0.3;
     double q = distribution(engine); // Generate random number
 
     std::cout << "\n" << "Choosing Node" << std::endl;
@@ -209,13 +211,13 @@ unsigned AntColonySystem::choose_node(Ant &ant)
 
     for (auto neighbour = 0; neighbour < neighbourhood.size(); ++neighbour)
     {
-        if (neighbourhood[neighbour] == ant.goal_node_)
-        {
-            ant.path_.push_back(neighbourhood[neighbour]);
-            ant.distance_ += graph_.geo_distance[local_indices_arcs[neighbour]];
-            ant.curr_node_ = neighbourhood[neighbour];
-            return local_indices_arcs[neighbour];
-        }
+        // if (neighbourhood[neighbour] == ant.goal_node_)
+        // {
+        //     ant.path_.push_back(neighbourhood[neighbour]);
+        //     ant.distance_ += graph_.geo_distance[local_indices_arcs[neighbour]];
+        //     ant.curr_node_ = neighbourhood[neighbour];
+        //     return local_indices_arcs[neighbour];
+        // }
 
         
 
@@ -407,11 +409,11 @@ int main()
 
     // Initialize the Ant Colony System with parameters
     int num_ants = 20;
-    double alpha = 0.5;
-    double beta = 0.8;
+    double alpha = 0.8;
+    double beta = 0.15;
     double decay_rate = 0.80;
     double Q = 100.0;
-    int iterations = 100;
+    int iterations = 1000;
 
     AntColonySystem acs(test_graph_1, num_ants, alpha, beta, decay_rate, Q, iterations);
     acs.get_path(src_lat, src_long, dst_lat, dst_long);
