@@ -52,11 +52,11 @@ class AntColonySystem
 {
 private:
     int num_ants_;
-    double alpha_;      // history_coefficient
+    int iterations_;
+    double alpha_;      // pheromone_coefficient
     double beta_;       // heuristic_coefficient
     double decay_rate_; // (rho) decay rate of pheromones
     double Q_;          // constant multiplication factor for the cost/reward function
-    int iterations_;
     unsigned distance_global_ = 0;
 
     std::vector<double> pheromone_list_; // Using a list to mimic graph_.head vector
@@ -66,8 +66,8 @@ private:
     SimpleOSMCarRoutingGraph graph_;
 
 public:
-    AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, double alpha, double beta, double decay_rate, double Q, int iterations)
-        : graph_(graph), num_ants_(n_ants), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), Q_(Q), iterations_(iterations)
+    AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, int iterations, double alpha, double beta, double decay_rate, double Q)
+        : graph_(graph), num_ants_(n_ants), iterations_(iterations), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), Q_(Q)
     {
         pheromone_list_.resize(graph_.head.size());
         std::fill(pheromone_list_.begin(), pheromone_list_.end(), initial_pheromones);
@@ -83,8 +83,11 @@ public:
     }
 
     // Path Planning Methods
-    void get_path(double const src_latitude, double const src_long,
-                  double const dst_latitdue, double const dest_long);
+    // [ ] Parameter type unsigned const for testing purposes
+    void get_path(unsigned const start_id, unsigned const end_id);
+
+    /* void get_path(double const src_latitude, double const src_long,
+                  double const dst_latitdue, double const dest_long); */
 
     // Return arc index
     unsigned choose_node(Ant &ant);
