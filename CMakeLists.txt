@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.10)
-project(ProjectName)
+cmake_minimum_required(VERSION 3.22)
+project(ACS)
 
 # Set C++17 as the standard
 set(CMAKE_CXX_STANDARD 17)
@@ -35,3 +35,23 @@ endif()
 
 
 # If RoutingKit is header-only and uses templates heavily, no need to link against a library
+
+# LibXL paths
+set(LIBXL_INCLUDE_DIR "/home/aaroneponymous/External_Lib/libxl-4.3.0.14/include_cpp")
+set(LIBXL_LIBRARY_DIR "/home/aaroneponymous/External_Lib/libxl-4.3.0.14/lib64")  
+set(LIBXL_LIBRARY_NAME "libxl.so")
+
+# Add LibXL include directory
+include_directories(${LIBXL_INCLUDE_DIR})
+
+# Find and link the appropriate LibXL library
+find_library(LIBXL_LIB NAMES ${LIBXL_LIBRARY_NAME} PATHS ${LIBXL_LIBRARY_DIR})
+if (LIBXL_LIB)
+    message(STATUS "LibXL library found: ${LIBXL_LIB}")
+    target_link_libraries(acs ${LIBXL_LIB})
+else()
+    message(STATUS "LibXL library not found. Ensure the path is correct and the library is available.")
+endif()
+
+# Ensure runtime linker finds the library by setting rpath
+set_target_properties(acs PROPERTIES INSTALL_RPATH ${LIBXL_LIBRARY_DIR})

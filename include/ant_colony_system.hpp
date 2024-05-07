@@ -34,7 +34,10 @@ struct Ant
     std::unordered_set<unsigned> visited_nodes_; // Set of Visited Nodes
 
     Ant(int id, unsigned start, unsigned goal)
-        : ant_id_(id), curr_node_(start), goal_node_(goal) {}
+        : ant_id_(id), curr_node_(start), goal_node_(goal) {
+            path_.push_back(start);
+            visited_nodes_.insert(start);
+        }
 };
 
 /**
