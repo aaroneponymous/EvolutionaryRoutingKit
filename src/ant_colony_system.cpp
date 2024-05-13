@@ -1,6 +1,7 @@
 #include <ant_colony_system.hpp>
 #include </home/aaroneponymous/RoutingKit/include/routingkit/osm_simple.h>
 #include <routingkit/geo_position_to_node.h>
+#include <libxl.h>
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -10,37 +11,45 @@
 #include <thread>
 #include <tuple>
 #include <string>
+#include <set>
+
 
 using namespace RoutingKit;
+using namespace std;
 
-void AntColonySystem::get_path(unsigned const start_id, unsigned const end_id)
+// [ ] Accounting for Cul De Sac
+// [ ] Remove Loop
+
+void AntColonySystem::get_path(double const src_latitude, double const src_longitude, double const dest_latitude, double const dest_longitude)
 {
     // Build the index to quickly map latitudes and longitudes
-    /* GeoPositionToNode map_geo_poisiton(graph_.latitude, graph_.longitude);
+    GeoPositionToNode map_geo_poisiton(graph_.latitude, graph_.longitude);
 
-    unsigned source = map_geo_poisiton.find_nearest_neighbor_within_radius(src_latitude, src_longitude, 1000).id;
-    if (source == invalid_id)
+    unsigned source_id = map_geo_poisiton.find_nearest_neighbor_within_radius(src_latitude, src_longitude, 1000).id;
+    if (source_id == invalid_id)
     {
         std::cout << "No node within 1000m from source position" << std::endl;
         return;
     }
 
-    unsigned destination = map_geo_poisiton.find_nearest_neighbor_within_radius(dest_latitude, dest_longitude, 1000).id;
-    if (destination == invalid_id)
+    unsigned destination_id = map_geo_poisiton.find_nearest_neighbor_within_radius(dest_latitude, dest_longitude, 1000).id;
+    if (destination_id == invalid_id)
     {
         std::cout << "No node within 1000m from target position" << std::endl;
         return;
     }
- */
-    // std::cout << "Source Node: " << source << ", ";
-    // std::cout << "Destination Node: " << destination << "\n";
 
-    // Algorithm Starts Here (after getting the node IDs)
 
-    // Heurisitically set max steps
-    std::vector<unsigned> result_path;
-    // const unsigned node_count = graph_.node_count();
-    const unsigned max_steps = 20;
+
+    std::cout << "Source Node: " << source_id << ", ";
+    std::cout << "Destination Node: " << destination_id << "\n";
+
+    
+
+
+    // ACS Algorithm
+
+    const unsigned max_steps = 1000;
 
     for (int i = 0; i < iterations_; i++)
     {
@@ -51,28 +60,15 @@ void AntColonySystem::get_path(unsigned const start_id, unsigned const end_id)
         {
             // [ ] Assign a thread here if parallelizing
 
-            unsigned start_node = start_id;
-            unsigned goal_node = end_id;
+            unsigned start_node = source_id;
+            unsigned goal_node = destination_id;
 
-            // BUG: Change source and destination with node ID above
             Ant ant(j, start_node, goal_node);
-
             ants_.push_back(ant);
 
-            // Ant ant(j, source, destination);
-            // ants_.push_back(ant);
             // std::cout << "\nAnt Number: " << j + 1 << std::endl;
-            // std::cout << "-------------\n"
-            //           << std::endl;
+            // std::cout << "-------------\n" << std::endl;
 
-            
-
-            // [x]: Added the below insertions in the ant constructor instead
-            // ant.path_.push_back(ant.curr_node_);
-            // ant.visited_nodes_.insert(ant.curr_node_);
-
-            // To save the arc indices (arcs on the path)
-            std::vector<unsigned> local_arc_index;
 
             while (ant.curr_node_ != ant.goal_node_ && ant.path_.size() < max_steps)
             {
@@ -115,10 +111,8 @@ void AntColonySystem::get_path(unsigned const start_id, unsigned const end_id)
                 // std::cout << "Ant Distance: " << ant.distance_ << "\n"
                 //           << std::endl;
 
-                // Push Edges in Local Arc Index
-
-                local_arc_index.push_back(arc_index);
-
+                // [x] Break Condition can be improved incorportating how further can
+                // [x] we potentially go in terms of other costs time etc.
                 if (distance_global_ != 0 && ant.distance_ > distance_global_)
                     break;
 
@@ -130,11 +124,15 @@ void AntColonySystem::get_path(unsigned const start_id, unsigned const end_id)
             if (distance_global_ == 0 || ant.distance_ < distance_global_)
             {
                 distance_global_ = ant.distance_;
-                global_tour_arcs_ = local_arc_index;
-                result_path = ant.path_;
-                global_tour_ = result_path;
+                global_tour_arcs_ = ant.indices_arcs;
+                global_tour_ = ant.path_;
+                global_ordered = ant.visited_nodes_;
 
                 print_global_path();
+
+                std::cout << "\n Printing Visited Global \n" << std::endl;
+                print_global_vist();
+
             }
         }
 
@@ -156,7 +154,7 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
     // Parameters for Decision
-    double q0 = 0.3;
+    double q0 = 0.4;
     double q = distribution(engine); // Generate random number
     double prob_sum = 0;
 
@@ -189,10 +187,6 @@ unsigned AntColonySystem::choose_node(Ant &ant)
 
     // std::cout << "Start = " << start << " End = " << end << std::endl;
 
-    // BUG: STUCK IN LOOP
-    // Probability Higher for the Path Taken
-    // 3 to 5: Local Update Rule
-    // Ant will probably move from 5 to 3 because probability is high
 
     for (unsigned j = start; j < end; ++j)
     {
@@ -212,46 +206,6 @@ unsigned AntColonySystem::choose_node(Ant &ant)
         
     }
 
-    // for (const auto &node : neighbourhood)
-    // {
-    //     std::cout << node << " ";
-    // }
-
-    // std::cout << std::endl;
-
-    // Calculate Probabilities Using Eq 1
-    // std::cout << "Probability Calculations ";
-
-    /* for (auto neighbour = 0; neighbour < neighbourhood.size(); ++neighbour)
-    {
-        // if (neighbourhood[neighbour] == ant.goal_node_)
-        // {
-        //     ant.path_.push_back(neighbourhood[neighbour]);
-        //     ant.distance_ += graph_.geo_distance[local_indices_arcs[neighbour]];
-        //     ant.curr_node_ = neighbourhood[neighbour];
-        //     return local_indices_arcs[neighbour];
-        // }
-
-        // Calculate Probability for this node
-        double pheromone_amount = pheromone_list_[local_indices_arcs[neighbour]];
-        double geo_distance = graph_.geo_distance[local_indices_arcs[neighbour]];
-        double heuristic_ = 0;
-
-        if (geo_distance > 0)
-        {
-            heuristic_ = 1 / geo_distance;
-        }
-        else
-        {
-            // [ ]: Else heuristic 1?
-            heuristic_ = 1;
-        }
-
-        double probability = std::pow(pheromone_amount, alpha_) * std::pow(heuristic_, beta_);
-        // std::cout << "Node [" << neighbourhood[neighbour] << "]: " << probability << " ";
-        probabilites.push_back(probability);
-        prob_sum += probability;
-    } */
 
     // Normalization Probability
     for (double &prob : probabilites)
@@ -314,10 +268,18 @@ unsigned AntColonySystem::choose_node(Ant &ant)
 
     unsigned next_node = neighbourhood[next_node_index];
     ant.curr_node_ = next_node;
+    // remove_loop(ant);
     ant.path_.push_back(next_node);
     ant.indices_arcs.push_back(local_indices_arcs[next_node_index]);
+    if (ant.visited_nodes_.find(next_node) != ant.visited_nodes_.end())
+    {
+        ant.visited_nodes_.erase(std::prev(ant.visited_nodes_.end()));
+    }
+
     ant.visited_nodes_.insert(next_node);
     ant.distance_ += graph_.geo_distance[local_indices_arcs[next_node_index]];
+
+    
 
     
 
@@ -329,11 +291,13 @@ void AntColonySystem::print_ant_path(Ant &ant)
 {
     for (const auto &node : ant.path_)
     {
-        std::cout << "Node: " << node << " ";
+        std::cout << node << " ";
     }
 
     std::cout << std::endl;
 }
+
+
 
 #ifdef OSM_CAR_STRUCT_H
 struct SimpleOSMCarRoutingGraph
@@ -364,7 +328,7 @@ struct SimpleOSMCarRoutingGraph
 int main()
 {
     // Path to your OSM PBF file
-    /* std::string pbf_file = "../../filtered_rochester.osm.pbf";
+    std::string pbf_file = "../../rochester.osm.pbf";
 
     // Load the graph
     std::cout << "Loading OSM data..." << std::endl;
@@ -373,7 +337,7 @@ int main()
     // Convert graph data to the format your ACS expects, if necessary
     // For simplicity, assume your ACS can directly use RoutingKit's graph structure
     std::cout << "Graph loaded with " << graph.node_count() << " nodes and "
-              << graph.arc_count() << " arcs." << std::endl; */
+              << graph.arc_count() << " arcs." << std::endl;
 
     // Geo Positions
     double src_lat = 43.15465;
@@ -381,8 +345,8 @@ int main()
     double dst_lat = 43.15164;
     double dst_long = -77.60327;
 
-    // 43.12932, -77.62833
-    // 43.12677, -77.6316
+    // 43.10527,-77.63279
+    // 43.10521,-77.62737
 
     // To get from 21814 to 25879 one needs 144251 milliseconds.
     // This query was answered in 15 microseconds.
@@ -441,23 +405,39 @@ int main()
         };
 
     // Initialize the Ant Colony System with parameters
-    int num_ants = 20;
+    int num_ants = 50;
     double alpha = 0.6;
     double beta = 0.8;
     double decay_rate = 0.80;
     double Q = 100.0;
-    int iterations = 1000;
+    int iterations = 10;
 
     // Define start and goal nodes
     unsigned start_node = 0; // Replace with the actual start node ID
     unsigned goal_node = 3;  // Replace with the actual goal node ID
 
-    AntColonySystem acs(test_graph_1, num_ants, iterations, alpha, beta, decay_rate, Q);
-    acs.get_path(start_node, goal_node);
+    // From: 43.10527,-77.63279
+    // To:   43.10521,-77.62737
+    // To:   43.10479,-77.62605
+
+
+    // From: 43.23468,-77.54830
+    // To:   43.16012,-77.60760
+
+    AntColonySystem acs(graph, num_ants, iterations, alpha, beta, decay_rate, Q);
+    acs.get_path(43.23468, -77.54830, 43.16012, -77.60760);
 
     std::cout << "\nPrinting Global Best\n"
               << std::endl;
+
     acs.print_global_path();
+
+
+    std::cout << "\n Printing Visited Global \n" << std::endl;
+    
+    acs.print_global_vist();
+
+
 
     return 0;
 }

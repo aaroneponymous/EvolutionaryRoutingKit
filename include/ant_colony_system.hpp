@@ -9,10 +9,13 @@
 #include </home/aaroneponymous/RoutingKit/include/routingkit/osm_simple.h>
 #include <vector>
 #include <unordered_set>
+#include <set>
 #include <iostream>
 #include <iomanip>
+#include <libxl.h>
 
 using namespace RoutingKit;
+using namespace libxl;
 
 /**
  * @brief:
@@ -24,14 +27,16 @@ struct Ant
     unsigned ant_id_;
     unsigned curr_node_; // or start/source node
     unsigned goal_node_; // or destination node
+    int steps_ = 0;
     unsigned distance_ = 0;
     double time_taken_ = 0;
     bool reached_ = false;
     bool elite_ = false;
+    
 
     std::vector<unsigned> path_;                 // Path Taken
     std::vector<unsigned> indices_arcs;          // Arc Indices in the Pheromone Matrix
-    std::unordered_set<unsigned> visited_nodes_; // Set of Visited Nodes
+    std::set<unsigned> visited_nodes_; // Set of Visited Nodes
 
     Ant(int id, unsigned start, unsigned goal)
         : ant_id_(id), curr_node_(start), goal_node_(goal) {
@@ -64,16 +69,38 @@ private:
 
     std::vector<double> pheromone_list_; // Using a list to mimic graph_.head vector
     std::vector<Ant> ants_;
-    std::vector<unsigned> global_tour_; //  Global Best Tour
-    std::vector<unsigned> global_tour_arcs_;
+    std::vector<unsigned> global_tour_arcs_; // Indices Pointing to pheromone_list_
+    
     SimpleOSMCarRoutingGraph graph_;
 
+    
+
 public:
+
+    std::vector<unsigned> global_tour_; //  Global Best Tour
+    std::set<unsigned> global_ordered;
+    
     AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, int iterations, double alpha, double beta, double decay_rate, double Q)
         : graph_(graph), num_ants_(n_ants), iterations_(iterations), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), Q_(Q)
     {
         pheromone_list_.resize(graph_.head.size());
         std::fill(pheromone_list_.begin(), pheromone_list_.end(), initial_pheromones);
+
+        // [ ] XLS Setup
+        // book = xlCreateBook();
+        /* if (book)
+        {
+            Sheet* sheet = book->addSheet("Sheet1");
+            if(sheet)
+            {
+                sheet->writeStr(2, 1, "Hello, World!");
+                sheet->writeNum(3, 1, 1000);
+            }
+            book->save("../data/example.xls");
+            book->release();
+        } */
+
+
     }
 
     // Change all parameters
@@ -87,10 +114,10 @@ public:
 
     // Path Planning Methods
     // [ ] Parameter type unsigned const for testing purposes
-    void get_path(unsigned const start_id, unsigned const end_id);
+    // void get_path(unsigned const start_id, unsigned const end_id);
 
-    /* void get_path(double const src_latitude, double const src_long,
-                  double const dst_latitdue, double const dest_long); */
+    void get_path(double const src_latitude, double const src_long,
+                  double const dst_latitdue, double const dest_long);
 
     // Return arc index
     unsigned choose_node(Ant &ant);
@@ -105,7 +132,17 @@ public:
      * @return void
      * @details Removes loops in path of an ant only when a point is revisted.
      */
-    static void remove_loop(Ant &ant);
+    void remove_loop(Ant& ant)
+    {
+        for (auto it = ant.path_.begin(); it != ant.path_.end(); ++it)
+        {
+            if (*it == ant.curr_node_)
+            {
+                ant.path_.erase(it, ant.path_.end());
+                break;
+            }
+        }
+    }
 
     void print_ant_path(Ant& ant);
 
@@ -113,12 +150,21 @@ public:
     {
         for (const auto& node : global_tour_)
         {
-            std::cout << "Node: " << node << " ";
+            std::cout << node << " ";
         }
 
         std::cout << std::endl;
 
         std::cout << "Distance: " << distance_global_ << std::endl;
+    }
+
+    void print_global_vist()
+    {
+        for (const auto& node: global_ordered)
+        {
+            std::cout << node << " ";
+        }
+        std::cout << std::endl;
     }
 
     // Accessors & Mutators

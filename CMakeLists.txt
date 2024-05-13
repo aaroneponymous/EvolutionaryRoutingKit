@@ -34,9 +34,29 @@ else()
 endif()
 
 
-# If RoutingKit is header-only and uses templates heavily, no need to link against a library
+# # If RoutingKit is header-only and uses templates heavily, no need to link against a library
 
-# LibXL paths
+# RoutingKit Paths
+# set(ROUTINGKIT_INCLUDE_DIR "/home/aaroneponymous/RoutingKit/include/routingkit")
+# set(ROUTINGKIT_LIBRARY_DIR "/home/aaroneponymous/RoutingKit/lib")
+# set(ROUTINGKIT_LIBRARY_NAME "libroutingkit.so")
+
+# # Add RoutingKit include directory
+# include_directories(${ROUTINGKIT_INCLUDE_DIR})
+
+# # Find and link the appropriate RoutingKit Library
+# find_library(ROUTINGKIT_LIB NAMES ${ROUTINGKIT_LIBRARY_NAME} PATHS ${ROUTINGKIT_LIBRARY_DIR})
+# if(ROUTINGKIT_LIB)
+#     message(STATUS "RoutingKit library found: ${ROUTINGKIT_LIB}")
+#     target_link_libraries(acs ${ROUTINGKIT_LIB})
+# else()
+#     message(STATUS "RoutingKit library not found. Ensure RoutingKit is correctly installed or the path is set correctly.")
+# endif()
+
+# set_target_properties(acs PROPERTIES INSTALL_RPATH ${ROUTINGKIT_LIBRARY_DIR})
+
+
+# LibXL PPaths
 set(LIBXL_INCLUDE_DIR "/home/aaroneponymous/External_Lib/libxl-4.3.0.14/include_cpp")
 set(LIBXL_LIBRARY_DIR "/home/aaroneponymous/External_Lib/libxl-4.3.0.14/lib64")  
 set(LIBXL_LIBRARY_NAME "libxl.so")

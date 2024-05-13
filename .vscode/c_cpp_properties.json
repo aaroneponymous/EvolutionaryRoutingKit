@@ -4,7 +4,8 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/home/aaroneponymous/RoutingKit/include/"
+                "/home/aaroneponymous/RoutingKit/include/",
+                "/home/aaroneponymous/External_Lib/libxl-4.3.0.14/include_cpp"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/g++",
