@@ -86,21 +86,6 @@ public:
         pheromone_list_.resize(graph_.head.size());
         std::fill(pheromone_list_.begin(), pheromone_list_.end(), initial_pheromones);
 
-        // [ ] XLS Setup
-        // book = xlCreateBook();
-        /* if (book)
-        {
-            Sheet* sheet = book->addSheet("Sheet1");
-            if(sheet)
-            {
-                sheet->writeStr(2, 1, "Hello, World!");
-                sheet->writeNum(3, 1, 1000);
-            }
-            book->save("../data/example.xls");
-            book->release();
-        } */
-
-
     }
 
     // Change all parameters
@@ -125,6 +110,7 @@ public:
     // Probability & Related Computational Functions
 
     std::vector<double> get_probabilities(Ant &ant); // Probability of moving from node i to neighbours
+
 
     /**
      * @brief Removes loops in path

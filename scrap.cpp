@@ -39,20 +39,35 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
         return;
     }
 
+
+
+    std::cout << "Source Node: " << source_id << ", ";
+    std::cout << "Destination Node: " << destination_id << "\n";
+
+    
+
+
     // ACS Algorithm
 
-    const unsigned max_steps = 500;
+    const unsigned max_steps = 1000;
 
     for (int i = 0; i < iterations_; i++)
     {
+        std::cout << "\nIteration Number: " << i + 1 << std::endl;
+        std::cout << "--------------------" << std::endl;
+
         for (int j = 0; j < num_ants_; j++)
         {
+            // [ ] Assign a thread here if parallelizing
 
             unsigned start_node = source_id;
             unsigned goal_node = destination_id;
 
             Ant ant(j, start_node, goal_node);
             ants_.push_back(ant);
+
+            // std::cout << "\nAnt Number: " << j + 1 << std::endl;
+            // std::cout << "-------------\n" << std::endl;
 
 
             while (ant.curr_node_ != ant.goal_node_ && ant.path_.size() < max_steps)
@@ -69,14 +84,39 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
                  *
                  */
 
-                // Arc Index: Returns the Arc Used to go from Point A to Point B (next node)
+                // std::cout << "Position Current : " << ant.curr_node_ << std::endl;
+                // std::cout << "-------------------" << std::endl;
+
                 unsigned arc_index = choose_node(ant);
+
+                // [x] Change ant's current node
+                // ant.indices_arcs.push_back(arc_index);
+
+                // Update Local Pheromone Trail (Local Update Rule)
+
+                // [ ] What if it's the last node and has no neighbours
+                // [ ] Return -1 to indicate that (to avoid that we can just
+                // [ ] in choose_node method and backtrack accordingly)
+
+                // Debug Update Before and After State
+                // std::cout << "\nNode Chosen: " << graph_.head[arc_index] << std::endl;
+                // std::cout << "Pheromone: "
+                //           << "Before: " << pheromone_list_[arc_index] << " ";
 
                 double pheromone_trail = pheromone_list_[arc_index];
                 pheromone_trail = ((1 - decay_rate_) * pheromone_trail) + (decay_rate_ * initial_pheromones);
+                pheromone_list_[arc_index] = pheromone_trail;
 
-                if (distance_global_ != 0 && ant.distance_ > distance_global_) break;
+                // std::cout << "After: " << pheromone_list_[arc_index] << std::endl;
+                // std::cout << "Ant Distance: " << ant.distance_ << "\n"
+                //           << std::endl;
 
+                // [x] Break Condition can be improved incorportating how further can
+                // [x] we potentially go in terms of other costs time etc.
+                if (distance_global_ != 0 && ant.distance_ > distance_global_)
+                    break;
+
+                // if (graph_.head[arc_index] == ant.goal_node_) break;
             }
 
             // print_ant_path(ant);
@@ -118,15 +158,15 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     double q = distribution(engine); // Generate random number
     double prob_sum = 0;
 
+    // std::cout << "\n"
+    //           << "Choosing Node" << std::endl;
+
+    // std::cout << "Q0: " << q0 << " Q: " << q << std::endl;
 
     // First get all the neighbours
     std::vector<unsigned> neighbourhood;
-    std::vector<unsigned> true_neighbours;
     std::vector<unsigned> local_indices_arcs;
     std::vector<double> probabilites;
-
-
-    // [ ] Finding Set Difference: Nodes That Can be Moved To Based on Turn Restrictions
     
 
     // BUG: Indexing (Out of Bounds)
@@ -146,14 +186,6 @@ unsigned AntColonySystem::choose_node(Ant &ant)
 
 
     // std::cout << "Start = " << start << " End = " << end << std::endl;
-
-    for (unsigned j = start; j < end; ++j)
-    {
-        neighbourhood.push_back(graph_.head[j]);
-        
-
-    }
-
 
 
     for (unsigned j = start; j < end; ++j)
@@ -181,6 +213,36 @@ unsigned AntColonySystem::choose_node(Ant &ant)
         prob /= prob_sum;
     }
 
+    // std::cout << std::endl;
+
+    // Print Probabilities
+
+    // std::cout << "Normalized Probailities: ";
+
+    // for (const auto &prob : probabilites)
+    // {
+    //     std::cout << prob << " ";
+    // }
+
+    // std::cout << std::endl;
+
+    // std::cout << "Neighbours: ";
+
+    // for (const auto &node : neighbourhood)
+    // {
+    //     std::cout << node << " ";
+    // }
+
+    // std::cout << std::endl;
+
+    // std::cout << "Arc Indices in Head ";
+
+    // for (const auto &arc : local_indices_arcs)
+    // {
+    //     std::cout << arc << " ";
+    // }
+
+    // std::cout << std::endl;
 
     // Decision Making Here: Exploitation (Greedy) or Exploration (Probabilistic)
     unsigned next_node_index = 0;
