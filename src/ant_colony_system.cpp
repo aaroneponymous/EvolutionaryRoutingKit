@@ -1,7 +1,6 @@
 #include <ant_colony_system.hpp>
 #include </home/aaroneponymous/RoutingKit/include/routingkit/osm_simple.h>
 #include <routingkit/geo_position_to_node.h>
-#include <libxl.h>
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -12,7 +11,6 @@
 #include <tuple>
 #include <string>
 #include <set>
-
 
 using namespace RoutingKit;
 using namespace std;
@@ -39,23 +37,26 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
         return;
     }
 
-    // ACS Algorithm
+    std::cout << "Source Node: " << source_id << ", ";
+    std::cout << "Destination Node: " << destination_id << "\n";
 
-    const unsigned max_steps = 500;
+    unsigned start_node = source_id;
+    unsigned goal_node = destination_id;
+
+    // ACS Algorithm
+    unsigned node_count = graph_.node_count();
+
+    const unsigned max_steps =  2000;
 
     for (int i = 0; i < iterations_; i++)
     {
         for (int j = 0; j < num_ants_; j++)
         {
 
-            unsigned start_node = source_id;
-            unsigned goal_node = destination_id;
-
-            Ant ant(j, start_node, goal_node);
+            Ant ant(j, source_id, goal_node);
             ants_.push_back(ant);
 
-
-            while (ant.curr_node_ != ant.goal_node_ && ant.path_.size() < max_steps)
+            while (ant.curr_node_ != ant.goal_node_ && ant.steps_ < max_steps)
             {
 
                 /**
@@ -69,14 +70,16 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
                  *
                  */
 
-                // Arc Index: Returns the Arc Used to go from Point A to Point B (next node)
-                unsigned arc_index = choose_node(ant);
 
+                // Arc ID
+                unsigned arc_index = choose_next_arc(ant);
+
+                // Local Update
                 double pheromone_trail = pheromone_list_[arc_index];
-                pheromone_trail = ((1 - decay_rate_) * pheromone_trail) + (decay_rate_ * initial_pheromones);
+                pheromone_list_[arc_index] = ((1 - decay_rate_) * pheromone_trail) + (decay_rate_ * initial_pheromones);
 
-                if (distance_global_ != 0 && ant.distance_ > distance_global_) break;
-
+                if (distance_global_ != 0 && ant.distance_ > distance_global_)
+                    break;
             }
 
             // print_ant_path(ant);
@@ -88,11 +91,8 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
                 global_tour_ = ant.path_;
                 global_ordered = ant.visited_nodes_;
 
-                print_global_path();
-
-                std::cout << "\n Printing Visited Global \n" << std::endl;
-                print_global_vist();
-
+                // print_global_path();
+                // std::cout << std::endl;
             }
         }
 
@@ -106,7 +106,7 @@ void AntColonySystem::get_path(double const src_latitude, double const src_longi
     }
 }
 
-unsigned AntColonySystem::choose_node(Ant &ant)
+unsigned AntColonySystem::choose_next_arc(Ant &ant)
 {
 
     std::random_device device;
@@ -114,10 +114,12 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     std::uniform_real_distribution<double> distribution(0.0, 1.0);
 
     // Parameters for Decision
-    double q0 = 0.4;
+    double q0 = q_;
     double q = distribution(engine); // Generate random number
     double prob_sum = 0;
 
+    // Retrieve Last Arc Index Used if any
+    int last_arc_index = ant.indices_arcs.empty() ? -1 : ant.indices_arcs.back();
 
     // First get all the neighbours
     std::vector<unsigned> neighbourhood;
@@ -125,39 +127,27 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     std::vector<unsigned> local_indices_arcs;
     std::vector<double> probabilites;
 
-
     // [ ] Finding Set Difference: Nodes That Can be Moved To Based on Turn Restrictions
-    
 
     // BUG: Indexing (Out of Bounds)
     // last node: ant.curr_node_ + 1 leads to arc count rather than
     // the limit
 
-    unsigned start = graph_.first_out[ant.curr_node_]; // at Node 4 - Index Start = 11
-    unsigned end = 0;
-    if (ant.curr_node_ + 1 == graph_.first_out.size() - 1)
-    {
-        end = graph_.head.size();
-    }
-    else
-    {
-        end = graph_.first_out[ant.curr_node_ + 1];
-    }
-
+    // Indices for First Out to Head
+    unsigned start_node_idx = graph_.first_out[ant.curr_node_]; // at Node 4 - Index Start = 11
+    unsigned end_node_idx = (ant.curr_node_ + 1 == graph_.first_out.size()) ? graph_.head.size() : graph_.first_out[ant.curr_node_ + 1];
 
     // std::cout << "Start = " << start << " End = " << end << std::endl;
 
-    for (unsigned j = start; j < end; ++j)
+    for (unsigned j = start_node_idx; j < end_node_idx; ++j)
     {
-        neighbourhood.push_back(graph_.head[j]);
-        
 
-    }
+        // Check for forbidden transitions
+        if (last_arc_index != -1 && is_transition_forbidden(last_arc_index, j))
+        {
+            continue; // Skip this neighbour if the transition is forbidden
+        }
 
-
-
-    for (unsigned j = start; j < end; ++j)
-    {
         unsigned node_id = graph_.head[j];
         neighbourhood.push_back(graph_.head[j]);
         local_indices_arcs.push_back(j);
@@ -171,16 +161,13 @@ unsigned AntColonySystem::choose_node(Ant &ant)
         double probability = std::pow(pheromone_amount, alpha_) * std::pow(heuristic_, beta_);
         probabilites.push_back(probability);
         prob_sum += probability;
-        
     }
-
 
     // Normalization Probability
     for (double &prob : probabilites)
     {
         prob /= prob_sum;
     }
-
 
     // Decision Making Here: Exploitation (Greedy) or Exploration (Probabilistic)
     unsigned next_node_index = 0;
@@ -208,6 +195,7 @@ unsigned AntColonySystem::choose_node(Ant &ant)
     ant.curr_node_ = next_node;
     // remove_loop(ant);
     ant.path_.push_back(next_node);
+    ant.steps_++;
     ant.indices_arcs.push_back(local_indices_arcs[next_node_index]);
     if (ant.visited_nodes_.find(next_node) != ant.visited_nodes_.end())
     {
@@ -216,10 +204,6 @@ unsigned AntColonySystem::choose_node(Ant &ant)
 
     ant.visited_nodes_.insert(next_node);
     ant.distance_ += graph_.geo_distance[local_indices_arcs[next_node_index]];
-
-    
-
-    
 
     // Return the index of the chosen arc, which is required for local pheromone update
     return local_indices_arcs[next_node_index];
@@ -235,7 +219,18 @@ void AntColonySystem::print_ant_path(Ant &ant)
     std::cout << std::endl;
 }
 
-
+bool AntColonySystem::is_transition_forbidden(unsigned from_arc, unsigned to_arc)
+{
+    // This method checks the forbidden turn arrays to see if the transition from from_arc to to_arc is not allowed
+    for (auto i = 0; i < graph_.forbidden_turn_from_arc.size(); ++i)
+    {
+        if (graph_.forbidden_turn_from_arc[i] == from_arc && graph_.forbidden_turn_to_arc[i] == to_arc)
+        {
+            return true;
+        }
+    }
+    return false;
+}
 
 #ifdef OSM_CAR_STRUCT_H
 struct SimpleOSMCarRoutingGraph
@@ -343,12 +338,12 @@ int main()
         };
 
     // Initialize the Ant Colony System with parameters
-    int num_ants = 50;
-    double alpha = 0.6;
-    double beta = 0.8;
-    double decay_rate = 0.80;
-    double Q = 100.0;
-    int iterations = 10;
+    int num_ants = 40;
+    double alpha = 0.35;
+    double beta = 0.75;
+    double decay_rate = 0.65;
+    double q = 0.70;
+    int iterations = 100;
 
     // Define start and goal nodes
     unsigned start_node = 0; // Replace with the actual start node ID
@@ -358,11 +353,10 @@ int main()
     // To:   43.10521,-77.62737
     // To:   43.10479,-77.62605
 
-
     // From: 43.23468,-77.54830
     // To:   43.16012,-77.60760
 
-    AntColonySystem acs(graph, num_ants, iterations, alpha, beta, decay_rate, Q);
+    AntColonySystem acs(graph, num_ants, iterations, alpha, beta, decay_rate, q);
     acs.get_path(43.23468, -77.54830, 43.16012, -77.60760);
 
     std::cout << "\nPrinting Global Best\n"
@@ -370,12 +364,10 @@ int main()
 
     acs.print_global_path();
 
+    std::cout << "\n Printing Visited Global \n"
+              << std::endl;
 
-    std::cout << "\n Printing Visited Global \n" << std::endl;
-    
     acs.print_global_vist();
-
-
 
     return 0;
 }

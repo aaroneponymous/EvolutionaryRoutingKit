@@ -13,6 +13,11 @@
 #include <iostream>
 #include <iomanip>
 #include <libxl.h>
+#include <queue>
+#include <limits>
+#include <algorithm>
+#include <unordered_map>
+#include <optional>
 
 using namespace RoutingKit;
 using namespace libxl;
@@ -32,17 +37,17 @@ struct Ant
     double time_taken_ = 0;
     bool reached_ = false;
     bool elite_ = false;
-    
 
-    std::vector<unsigned> path_;                 // Path Taken
-    std::vector<unsigned> indices_arcs;          // Arc Indices in the Pheromone Matrix
-    std::set<unsigned> visited_nodes_; // Set of Visited Nodes
+    std::vector<unsigned> path_;        // Path Taken
+    std::vector<unsigned> indices_arcs; // Arc Indices in the Pheromone Matrix
+    std::set<unsigned> visited_nodes_;  // Set of Visited Nodes
 
     Ant(int id, unsigned start, unsigned goal)
-        : ant_id_(id), curr_node_(start), goal_node_(goal) {
-            path_.push_back(start);
-            visited_nodes_.insert(start);
-        }
+        : ant_id_(id), curr_node_(start), goal_node_(goal)
+    {
+        path_.push_back(start);
+        visited_nodes_.insert(start);
+    }
 };
 
 /**
@@ -64,37 +69,33 @@ private:
     double alpha_;      // pheromone_coefficient
     double beta_;       // heuristic_coefficient
     double decay_rate_; // (rho) decay rate of pheromones
-    double Q_;          // constant multiplication factor for the cost/reward function
+    double q_;          // constant multiplication factor for the cost/reward function
     unsigned distance_global_ = 0;
 
     std::vector<double> pheromone_list_; // Using a list to mimic graph_.head vector
     std::vector<Ant> ants_;
     std::vector<unsigned> global_tour_arcs_; // Indices Pointing to pheromone_list_
-    
+
     SimpleOSMCarRoutingGraph graph_;
 
-    
-
 public:
-
     std::vector<unsigned> global_tour_; //  Global Best Tour
     std::set<unsigned> global_ordered;
-    
-    AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, int iterations, double alpha, double beta, double decay_rate, double Q)
-        : graph_(graph), num_ants_(n_ants), iterations_(iterations), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), Q_(Q)
+
+    AntColonySystem(SimpleOSMCarRoutingGraph &graph, int n_ants, int iterations, double alpha, double beta, double decay_rate, double q)
+        : graph_(graph), num_ants_(n_ants), iterations_(iterations), alpha_(alpha), beta_(beta), decay_rate_(decay_rate), q_(q)
     {
         pheromone_list_.resize(graph_.head.size());
         std::fill(pheromone_list_.begin(), pheromone_list_.end(), initial_pheromones);
-
     }
 
     // Change all parameters
-    void set_parameters(double alpha, double beta, double decay_rate, double Q)
+    void set_parameters(double alpha, double beta, double decay_rate, double q)
     {
         alpha_ = alpha;
         beta_ = beta;
         decay_rate_ = decay_rate;
-        Q_ = Q;
+        q_ = q;
     }
 
     // Path Planning Methods
@@ -105,12 +106,13 @@ public:
                   double const dst_latitdue, double const dest_long);
 
     // Return arc index
-    unsigned choose_node(Ant &ant);
+    unsigned choose_next_arc(Ant &ant);
 
     // Probability & Related Computational Functions
 
     std::vector<double> get_probabilities(Ant &ant); // Probability of moving from node i to neighbours
 
+    bool is_transition_forbidden(unsigned from_arc, unsigned to_arc);
 
     /**
      * @brief Removes loops in path
@@ -118,7 +120,7 @@ public:
      * @return void
      * @details Removes loops in path of an ant only when a point is revisted.
      */
-    void remove_loop(Ant& ant)
+    void remove_loop(Ant &ant)
     {
         for (auto it = ant.path_.begin(); it != ant.path_.end(); ++it)
         {
@@ -130,11 +132,11 @@ public:
         }
     }
 
-    void print_ant_path(Ant& ant);
+    void print_ant_path(Ant &ant);
 
     void print_global_path()
     {
-        for (const auto& node : global_tour_)
+        for (const auto &node : global_tour_)
         {
             std::cout << node << " ";
         }
@@ -146,7 +148,7 @@ public:
 
     void print_global_vist()
     {
-        for (const auto& node: global_ordered)
+        for (const auto &node : global_ordered)
         {
             std::cout << node << " ";
         }
@@ -158,12 +160,12 @@ public:
     double get_alpha() const { return alpha_; }
     double get_beta() const { return beta_; }
     double get_decay_rate() const { return decay_rate_; }
-    double get_Q() const { return Q_; }
+    double get_Q() const { return q_; }
 
     void set_alpha(double alpha) { alpha_ = alpha; }
     void set_beta(double beta) { beta_ = beta; }
     void set_decay_rate(double decay_rate) { decay_rate_ = decay_rate; }
-    void set_Q(double Q) { Q_ = Q; }
+    void set_Q(double Q) { q_ = Q; }
 };
 
 /**
